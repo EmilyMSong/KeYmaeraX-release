@@ -33,11 +33,11 @@ sealed abstract class ProofTerm {
       case _: RuleTerm => 1
       case NoProof => 1
       case UsubstProvableTerm(child, _) => child.numCons + 1
-      case RuleApplication(child, _, _) => child.numCons + 1
+      case RuleApplication(child, _, _, _) => child.numCons + 1
       case ProlongationTerm(child, pro) => child.numCons + pro.numCons + 1
       case ForwardNewConsequenceTerm(child, _, _) => child.numCons + 1
       case URenameTerm(child, _) => child.numCons + 1
-      case Sub(child, sub, _) => child.numCons + sub.numCons + 1
+      case Sub(child, sub, _, _) => child.numCons + sub.numCons + 1
       case _: StartProof => 1
     }
   }
@@ -52,10 +52,10 @@ sealed abstract class ProofTerm {
       case _ : StartProof => Set.empty
       case _: URenameTerm => Set.empty
       case UsubstProvableTerm(child, _) => child.axiomsUsed
-      case RuleApplication(child, _, _) => child.axiomsUsed
+      case RuleApplication(child, _, _, _) => child.axiomsUsed
       case ProlongationTerm(child, pro) => child.axiomsUsed ++ pro.axiomsUsed
       case ForwardNewConsequenceTerm(child, _, _) => child.axiomsUsed
-      case Sub(child, sub, _) => child.axiomsUsed ++ sub.axiomsUsed
+      case Sub(child, sub, _, _) => child.axiomsUsed ++ sub.axiomsUsed
 
     }
   }
@@ -64,7 +64,7 @@ sealed abstract class ProofTerm {
   def rulesUsed: Set[String] = {
     this match {
       case RuleTerm(name) => Set(name)
-      case RuleApplication(child, rule, _) => child.rulesUsed + rule.name
+      case RuleApplication(child, rule, _, _) => child.rulesUsed + rule.name
       case _ : AxiomTerm => Set.empty
       case _ : FOLRConstant => Set.empty
       case NoProof => Set.empty
@@ -73,7 +73,7 @@ sealed abstract class ProofTerm {
       case UsubstProvableTerm(child, _) => child.rulesUsed
       case ProlongationTerm(child, pro) => child.rulesUsed ++ pro.rulesUsed
       case ForwardNewConsequenceTerm(child, _, _) => child.rulesUsed
-      case Sub(child, sub, _) => child.rulesUsed ++ sub.rulesUsed
+      case Sub(child, sub, _, _) => child.rulesUsed ++ sub.rulesUsed
     }
   }
 
@@ -90,8 +90,8 @@ sealed abstract class ProofTerm {
       case UsubstProvableTerm(child, _) => child.arithmeticGoals
       case ProlongationTerm(child, pro) => child.arithmeticGoals ++ pro.arithmeticGoals
       case ForwardNewConsequenceTerm(child, _, _) => child.arithmeticGoals
-      case RuleApplication(child, _, _) => child.arithmeticGoals
-      case Sub(child, sub, _) => child.arithmeticGoals ++ sub.arithmeticGoals
+      case RuleApplication(child, _, _, _) => child.arithmeticGoals
+      case Sub(child, sub, _, _) => child.arithmeticGoals ++ sub.arithmeticGoals
     }
   }
 
@@ -140,9 +140,9 @@ sealed abstract class ProofTerm {
       case UsubstProvableTerm(child, sub) => 3*wordSize + child.bytesEstimate + subBytesEstimate(sub)
       case ProlongationTerm(child, pro) => 3*wordSize + child.bytesEstimate + pro.bytesEstimate
       case ForwardNewConsequenceTerm(child, con, rule) => 4*wordSize + child.bytesEstimate + sequentBytesEstimate(con) + ruleBytesEstimate(rule)
-      case r@RuleApplication(child, _, _) => 6*wordSize + child.bytesEstimate + intSizeEstimate + seqBytesEstimate(r.positions) + seqBytesEstimate(r.args)
+      case r@RuleApplication(child, _, _, _) => 6*wordSize + child.bytesEstimate + intSizeEstimate + seqBytesEstimate(r.positions) + seqBytesEstimate(r.args)
       case URenameTerm(child, ren) => child.bytesEstimate + seqBytesEstimate(List(ren.what, ren.repl)) //@todo
-      case Sub(child, sub, _) => 4*wordSize + child.bytesEstimate + sub.bytesEstimate + intSizeEstimate
+      case Sub(child, sub, _, _) => 4*wordSize + child.bytesEstimate + sub.bytesEstimate + intSizeEstimate
     }
   }
 }
@@ -150,7 +150,7 @@ sealed abstract class ProofTerm {
 case class FOLRConstant(f : Formula) extends ProofTerm
 
 /** Witness for rule application. */
-case class RuleApplication(child: ProofTerm, rule: Rule, subgoal: Int) extends ProofTerm {
+case class RuleApplication(child: ProofTerm, rule: Rule, subgoal: Int, branches: Int) extends ProofTerm {
   val (positions: List[SeqPos], args: List[Expression]) = rule match {
     //@todo do a total pattern match on all rules in the core and produce individualized proof terms for each of them.
     //This is necessary because we need positions where the rule should be applied within the *sequent* in addition to subgoal,
@@ -206,4 +206,4 @@ case object NoProof extends ProofTerm
 
 case class URenameTerm(child: ProofTerm, ren: URename) extends ProofTerm
 
-case class Sub(child: ProofTerm, sub: ProofTerm, idx: Int) extends ProofTerm
+case class Sub(child: ProofTerm, sub: ProofTerm, idx: Int, branches: Int) extends ProofTerm

@@ -56,13 +56,13 @@ object ProofChecker {
               val node = proofNode(axiomFml)
               ??? //@todo proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
           }
-        case RuleApplication(child, rule, subgoal) => apply(child)(rule, subgoal)
+        case RuleApplication(child, rule, subgoal, _) => apply(child)(rule, subgoal)
         case RuleTerm(name) =>
           if (ProvableSig.rules.contains(name)) ProvableSig.rules(name)
           else ProvableInfo.ofStoredName(name).asInstanceOf[DerivedRuleInfo].provable
         case ForwardNewConsequenceTerm(child, con, rule) => apply(child)(con, rule)
         case ProlongationTerm(child, pro) => apply(child)(apply(pro))
-        case Sub(child, sub, i) => apply(child)(apply(sub), i)
+        case Sub(child, sub, i, _) => apply(child)(apply(sub), i)
         case StartProof(goal) => ProvableSig.startPlainProof(goal)
         case UsubstProvableTerm(child, sub) => apply(child)(sub)
         case URenameTerm(child, ren) => apply(child)(ren)
@@ -71,4 +71,5 @@ object ProofChecker {
 
     result
   } ensures(r => phi.isEmpty || r.conclusion == goalSequent(phi.get), "Resulting Provable proves given formula if defined for " + phi + " : " + e)
+
 }

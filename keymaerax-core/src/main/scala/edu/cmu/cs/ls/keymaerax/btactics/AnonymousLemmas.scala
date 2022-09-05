@@ -9,7 +9,7 @@ import java.util.UUID
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.lemma.{Lemma, LemmaDBFactory}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{ProvableSig, TermProvable}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.infrastruct.{ProvableHelper, UnificationTools}
@@ -44,7 +44,10 @@ object AnonymousLemmas {
   /** Remembers a lemma (returns previously proven lemma or proves fresh if non-existent). */
   def remember(p: ProvableSig, t: BelleExpr, namespace: String): Lemma = {
     require(p.subgoals.size == 1)
-    find(p.subgoals.head, namespace).getOrElse(store(TactixLibrary.proveBy(p, t), namespace))
+    p match {
+      case p : TermProvable => store(TactixLibrary.proveBy(p, t), namespace)
+      case _ => find(p.subgoals.head, namespace).getOrElse(store(TactixLibrary.proveBy(p, t), namespace))
+    }
   }
 
   /** Stores an anonymous lemma. */

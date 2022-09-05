@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.macros.{DerivationInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.parser.ArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.ParsedArchiveEntry
 import testHelper.KeYmaeraXTestTags.TodoTest
@@ -73,6 +74,193 @@ class ProofTermCheckerTests extends TacticTestBase {
     println(tacticResult)
     checkIfPT(tacticResult, f)
   }}
+
+  it should "read off a implyR tactic" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "A() -> A()".asFormula
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, TactixLibrary.propClose)
+    println("Original proof term:")
+    println(tacticResult)
+    println()
+    checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+
+  it should "read off a implyR and orR tactic" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "A() -> A() | A()".asFormula
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, TactixLibrary.propClose)
+    println("Original proof term:")
+    println(tacticResult)
+    println()
+    checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+
+  it should "read off a implyR and andR tactic" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "A() -> A() & A()".asFormula
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, TactixLibrary.propClose)
+    println("Original proof term:")
+    println(tacticResult)
+    println()
+    checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+
+  it should "read off a tactic for a propositional formula" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "v>0 & (x>0 & v>0 -> x*v>0) -> (x>0 -> x*v>0)".asFormula
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, TactixLibrary.propClose)
+    println("Original proof term:")
+    println(tacticResult)
+    println()
+    checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+
+  it should "read off a tactic for benchmark 1" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "x>=0 -> [x:=x+1;]x>=1".asFormula
+    val tac = BelleParser("implyR('R==\"x>=0 -> [x:=x+1;]x>=1\");  assignb('R==\"[x:=x+1;]x>=1\");  QE")
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, tac)
+    println("Original proof term:")
+    println(tacticResult)
+    println()
+    // checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+
+  it should "read off a tactic for benchmark 2" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "x>=0 -> [x:=x+1;][x:=x+1; ++ y:=x+1;]x>=1".asFormula
+    val tac = BelleParser("assignb('R==\"x>=0->#[x:=x+1;][x:=x+1;++y:=x+1;]x>=1#\");\nchoiceb('R==\"x_0>=0->\\forall x (x=x_0+1->#[x:=x+1;++y:=x+1;]x>=1#)\");\nassignb('R==\"x_0>=0->\\forall x (x=x_0+1->#[x:=x+1;]x>=1#&[y:=x+1;]x>=1)\");\nassignb('R==\"x_0>=0->\\forall x (x=x_0+1->x+1>=1&#[y:=x+1;]x>=1#)\");\nQE")
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, tac)
+    println("Original proof term:")
+    println(tacticResult)
+    // checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+  // ^^ uses RuleTerm
+
+  it should "read off a tactic for benchmark 3" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "x>=0 -> [x:=x+1;][{x:=x+1;}*@invariant(x>=1)]x>=1".asFormula
+    val tac = BelleParser("unfold;\nloop(\"x>=1\", 'R==\"[{x:=x+1;}*]x>=1\"); <(\n  \"Init\":\n    QE,\n  \"Post\":\n    id,\n  \"Step\":\n    assignb('R==\"[x:=x+1;]x>=1\");\n    QE\n)")
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, tac)
+    println("Original proof term:")
+    println(tacticResult)
+    // checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+  // ^^ fails
+
+  it should "read off a tactic for benchmark 4" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "x>=0 -> [x:=x+1;][{x'=2}]x>=1".asFormula
+    val tac = BelleParser("implyR(1) ; assignb(1) ; ODE(1)")
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, tac)
+    println("Original proof term:")
+    println(tacticResult)
+    // checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+  // ^^ STILL contains NoProof
+
+  it should "read off a tactic for benchmark 5" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "x>=0 -> [x:=x+1;][x:=*; ?x>=1;]x>=1".asFormula
+    val tac = BelleParser("implyR(1) ; assignb(1) ; composeb(1) ; randomb(1) ; allR(1) ; testb(1) ; prop")
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, tac)
+    println("Original proof term:")
+    println(tacticResult)
+    println()
+    // checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+
+  it should "read off a tactic for benchmark: cascaded" in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
+    val f = "x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula
+    val tac = BelleParser("implyR('R==\"x>0->[{x'=5}{x'=2}{x'=x}]x>0\");\ncomposeb('R==\"[{x'=5}{x'=2}{x'=x}]x>0\");\nODE('R==\"[{x'=5}][{x'=2}{x'=x}]x>0\");\ndW('R==\"[{x'=5,time_'=1&true&time_>=0&x=5*time_+x_0}][{x'=2}{x'=x}]x>0\");\ncomposeb('R==\"[{x'=2}{x'=x}]x>0\");\nODE('R==\"[{x'=2}][{x'=x}]x>0\");\ndW('R==\"[{x'=2,time__0'=1&true&time__0>=0&x=2*time__0+x_1}][{x'=x}]x>0\");\nODE('R==\"[{x'=x}]x>0\")")
+    val provable = TermProvable.startPlainProof(f)
+    val tacticResult = proveBy(provable, tac)
+    println("Original proof term:")
+    println(tacticResult)
+    println()
+    // checkIfPT(tacticResult, f)
+
+    tacticResult match {
+      case TermProvable(_, proofTerm, _) =>
+        val translated = ProofTermChecker.translate(proofTerm)
+        println("Tactic:")
+        println(translated.prettyString)
+        proveBy(f, translated) shouldBe 'proved
+    }
+  }}
+  //^^ uses RuleTerm, ForwardNewConsequenceTerm, ProlongationTerm
 
   it should "FEATURE_REQUEST: work for monoCars" taggedAs TodoTest in withTemporaryConfig(Map(Configuration.Keys.PROOF_TERM -> "true")) { withMathematica { _ =>
     val fml =
